@@ -1,4 +1,5 @@
-data_root: './data/dataset'
+data_root: './data/dataset/train'
+val_root: './data/dataset/val'
 work_dir: work_space
 model_name: "ResNet18"
 
@@ -7,7 +8,7 @@ input_size: [112,112]
 RGB_MEAN: [0.5, 0.5, 0.5]  # for normalize inputs to [-1, 1],Sequence of means for each channel.
 RGB_STD: [0.5, 0.5, 0.5]   # for normalize,Sequence of standard deviations for each channel.
 
-batch_size: 8
+batch_size: 16
 lr: 0.1
 momentum: 0.9              # SGD momentum
 num_epoch: 100

@@ -38,6 +38,7 @@ class Trainer(object):
         torch.cuda.manual_seed(self.SEED)
 
         self.data_root = cfg["data_root"]
+        self.val_root = cfg["val_root"]
         self.work_dir = cfg["work_dir"]
         self.model_name = cfg["model_name"]
         self.resume = cfg["resume"]
@@ -69,26 +70,24 @@ class Trainer(object):
 
         self.device = torch.device("cuda:{}".format(self.gpu_id[0]) if torch.cuda.is_available() else "cpu")
 
-        self.prepare_train_dataset()
-        self.prepare_val_dataset()
+        self.train_dataloader()
+        self.val_dataloader()
         self.model = self.build(self.model_name, input_size=self.input_size, num_classes=self.num_class)
         self.model.to(self.device)
         self.optimizer = self.get_optimizer(optim_tpye="SGD")
         self.loss = nn.CrossEntropyLoss()
         self.lr_scheduler = lr_scheduler.multi_step_lr(self.optimizer, self.stages, gamma=self.lr)
 
-    def prepare_train_dataset(self):
+    def train_dataloader(self):
         """
         load train data
         :return:
         """
-        print("=" * 60)
-        train_transform = custom_transform.custom_transform(
-            self.input_size,
-            self.RGB_MEAN,
-            self.RGB_STD,
-            transform_type="default"
-        )
+        train_transform = custom_transform.custom_transform(self.input_size,
+                                                            self.RGB_MEAN,
+                                                            self.RGB_STD,
+                                                            transform_type="train"
+                                                            )
         dataset_train = imagefolder_dataset.ImageFolderDataset(self.data_root,
                                                                train_transform)
         # create a weighted random sampler to process imbalanced data
@@ -101,23 +100,35 @@ class Trainer(object):
             sampler = None
             shuffle = True
 
-        self.train_loader = torch_utils.DataLoader(
-            dataset_train,
-            batch_size=self.batch_size,
-            sampler=sampler,
-            num_workers=self.num_workers,
-            shuffle=shuffle,
-        )
-
+        self.train_loader = torch_utils.DataLoader(dataset_train,
+                                                   batch_size=self.batch_size,
+                                                   sampler=sampler,
+                                                   num_workers=self.num_workers,
+                                                   shuffle=shuffle)
         self.num_class = len(self.train_loader.dataset.classes)
         self.num_images = len(self.train_loader) * self.batch_size
         print("train num_images :{},class_num:{}".format(self.num_images, self.num_class))
 
-    def prepare_val_dataset(self):
+    def val_dataloader(self):
         """
         load val data
         :return:
         """
+        val_transform = custom_transform.custom_transform(self.input_size,
+                                                          self.RGB_MEAN,
+                                                          self.RGB_STD,
+                                                          transform_type="val")
+        dataset_val = imagefolder_dataset.ImageFolderDataset(self.val_root,
+                                                             val_transform)
+
+        self.val_loader = torch_utils.DataLoader(dataset_val,
+                                                 batch_size=self.batch_size,
+                                                 num_workers=self.num_workers,
+                                                 shuffle=False)
+
+        val_num_class = len(self.val_loader.dataset.classes)
+        val_num_images = len(self.val_loader) * self.batch_size
+        print("val num_images :{},class_num:{}".format(val_num_images, val_num_class))
 
     def get_optimizer(self, optim_tpye="SGD"):
         """
@@ -168,6 +179,7 @@ class Trainer(object):
             step = self.train_step(epoch, step)
             lr = self.optimizer.param_groups[0]['lr']
             self.writer.add_scalar("lr_epoch", lr, epoch)
+            self.evaluation(epoch)
             self.save_model(self.model, self.optimizer, self.model_root, self.model_name, epoch, self.gpu_id)
 
     def train_step(self, epoch, step):
@@ -206,7 +218,7 @@ class Trainer(object):
                 # dispaly training loss & acc
                 if step % self.disp_freq == 0 and step > 0:
                     lr = self.optimizer.param_groups[0]["lr"]
-                    train_log = "epoch/step: {}/{} lr: {} Acc: {}".format(epoch, step, lr, acc)
+                    train_log = "epoch/step: {:0=3}/{} lr: {} Acc: {}".format(epoch, step, lr, acc)
                     self.val_log.write_line_str(train_log)
                     print(train_log)
             self.writer.add_scalar("Training_Loss_epoch", losses.avg, epoch)
@@ -219,6 +231,25 @@ class Trainer(object):
         :param epoch:
         :return:
         """
+        self.model.eval()  # set to training mode
+        losses = AverageMeter()
+        top1 = AverageMeter()
+        with torch.no_grad():
+            for data in self.val_loader:
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
+                outputs = self.model(inputs)
+                loss = self.loss(outputs, labels)
+                # measure accuracy and record loss
+                acc, = accuracy(outputs.data, labels, topk=(1,))
+                losses.update(loss.data.item(), inputs.size(0))
+                top1.update(acc.data.item(), inputs.size(0))
+        val_log = "evaluation-epoch: {:0=3} loss: {} Acc: {}".format(epoch, losses.avg, top1.avg)
+        print(val_log)
+        self.val_log.write_line_str(val_log)
+        self.writer.add_scalar("Val_Loss_epoch", losses.avg, epoch)
+        self.writer.add_scalar("Val_Accuracy", top1.avg, epoch)
         return None
 
     @staticmethod

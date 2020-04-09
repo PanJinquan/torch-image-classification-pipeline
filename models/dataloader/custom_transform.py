@@ -100,11 +100,17 @@ def custom_transform(input_size, RGB_MEAN, RGB_STD, transform_type):
             transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
         ])
 
-    elif transform_type == "default":
+    elif transform_type == "train":
         transform = transforms.Compose([
             transforms.Resize([int(128 * input_size[0] / 112), int(128 * input_size[0] / 112)]),
             transforms.RandomCrop([input_size[0], input_size[1]]),
             transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
+        ])
+    elif transform_type == "val":
+        transform = transforms.Compose([
+            transforms.Resize([int(128 * input_size[0] / 112), int(128 * input_size[0] / 112)]),
             transforms.ToTensor(),
             transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
         ])
