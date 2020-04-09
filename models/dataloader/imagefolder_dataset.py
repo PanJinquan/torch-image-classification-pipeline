@@ -58,7 +58,7 @@ class ImageFolderDataset(Dataset):
         :param repeat: 所有样本数据重复次数，默认循环一次，当repeat为None时，表示无限循环<sys.maxsize
         '''
         self.classes, self.class_to_idx, self.imgs = self.get_imgs_classes(image_dir_list, shuffle)
-        self.s_transform = transform
+        self.transform = transform
         self.repeat = repeat
 
     def __getitem__(self, idx):
@@ -72,8 +72,8 @@ class ImageFolderDataset(Dataset):
         # image_processing.show_image("image",image)
         # cv2.waitKey(0)
         image = Image.fromarray(image)
-        if self.s_transform:
-            image = self.s_transform(image)
+        if self.transform:
+            image = self.transform(image)
         return image, label_id
 
     def __len__(self):
@@ -90,11 +90,22 @@ class ImageFolderDataset(Dataset):
         """
         return len(self.classes)
 
-    @staticmethod
-    def get_imgs_classes(image_dir_list, shuffle):
+    def get_class_to_idx(self):
         """
-        get image and classes
+        class -> ID
+        :return:
+        """
+        return self.class_to_idx
+
+    @staticmethod
+    def get_imgs_classes(image_dir_list, shuffle, only_id=True):
+        """
+        get image list and classes
         :param image_dir_list:
+        :param shuffle:
+        :param only_id: <bool>labels(classes)的名称格式,避免多个数据集的相同的ID
+                        False:  label = "parent_dir/sub_dir",
+                        True:   label = "sub_dir"
         :return:
         """
         if isinstance(image_dir_list, str):
@@ -104,9 +115,10 @@ class ImageFolderDataset(Dataset):
         image_labels = []
         for image_dir in image_dir_list:
             print("loading image from:{}".format(image_dir))
-            dir_id = os.path.basename(image_dir)
             image_list, label_list = file_processing.get_files_labels(image_dir, postfix=["*.jpg"])
-            label_list = [os.path.join(dir_id, l) for l in label_list]
+            if not only_id:
+                dir_id = os.path.basename(image_dir)
+                label_list = [os.path.join(dir_id, l) for l in label_list]
             print("----have images:{},lable set:{}".format(len(image_list), len(set(label_list))))
             image_lists += image_list
             image_labels += label_list
@@ -160,7 +172,7 @@ class ImageFolderDataset(Dataset):
         :param data:
         :return:
         '''
-        image = self.s_transform(image)
+        image = self.transform(image)
         return image
 
 
@@ -177,7 +189,7 @@ class KDImageFolderDataset(ImageFolderDataset):
         :param t_transform: teacher transform
         :param repeat: 所有样本数据重复次数，默认循环一次，当repeat为None时，表示无限循环<sys.maxsize
         '''
-        self.classes, self.class_to_idx, self.imgs = self.get_imgs_classes(image_dir_list,shuffle=True)
+        self.classes, self.class_to_idx, self.imgs = self.get_imgs_classes(image_dir_list, shuffle=True)
         self.comment_transform = comment_transform
         self.s_transform = s_transform
         self.t_transform = t_transform
@@ -256,7 +268,7 @@ class DistributedWeightedSampler(Sampler):
 
 
 if __name__ == '__main__':
-    image_dir1 = "/media/dm/dm/FaceRecognition/torch-anti-spoofing-Pipeline/data/dataset"
+    image_dir1 = "../../data/dataset"
     # image_dir2 = "/media/dm/dm1/project/InsightFace_Pytorch/custom_insightFace/data/faces_emore/imgs"
     # 图像预处理Rescale，RandomCrop，ToTensor
     input_size = [112, 112]
@@ -272,6 +284,7 @@ if __name__ == '__main__':
     DROP_LAST = True
     dataset_train = ImageFolderDataset(image_dir_list=image_dir_list, transform=train_transform)
     print("num classs:{}".format(dataset_train.get_numclass()))
+    print("class_to_idx:{}".format(dataset_train.get_class_to_idx()))
     weights = make_weights_for_balanced_classes(dataset_train.imgs, len(dataset_train.classes))
     weights = torch.DoubleTensor(weights)
     # 自定义从数据集中取样本的策略，如果指定这个参数，那么shuffle必须为False
