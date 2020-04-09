@@ -1,0 +1,21 @@
+data_root: './data/dataset'
+work_dir: work_space
+model_name: "ResNet18"
+
+resume: False
+input_size: [112,112]
+RGB_MEAN: [0.5, 0.5, 0.5]  # for normalize inputs to [-1, 1],Sequence of means for each channel.
+RGB_STD: [0.5, 0.5, 0.5]   # for normalize,Sequence of standard deviations for each channel.
+
+batch_size: 8
+lr: 0.1
+momentum: 0.9              # SGD momentum
+num_epoch: 100
+resample: True
+num_epoch_warm_up: 5
+weight_decay: 5e-4
+stages: [20,40,60]
+gpu_id: [0]
+num_workers: 4
+disp_freq: 10
+verbose: True
