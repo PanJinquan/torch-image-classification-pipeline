@@ -72,7 +72,7 @@ class Trainer(object):
 
         self.train_dataloader()
         self.val_dataloader()
-        self.model = self.build(self.model_name, input_size=self.input_size, num_classes=self.num_class)
+        self.model = self.build_net(self.model_name, input_size=self.input_size, num_classes=self.num_class)
         self.model.to(self.device)
         self.optimizer = self.get_optimizer(optim_tpye="SGD")
         self.loss = nn.CrossEntropyLoss()
@@ -142,7 +142,7 @@ class Trainer(object):
 
         return optimizer
 
-    def build(self, model_name, input_size, num_classes):
+    def build_net(self, model_name, input_size, num_classes):
         """
         :param model_name:
         :param input_size:

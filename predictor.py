@@ -23,19 +23,18 @@ from utils import image_processing, file_processing
 sys.path.append(os.getcwd())
 
 
-class Validation(object):
+class Predictor(object):
     def __init__(self, model_path, model_name, input_size, num_classes, device):
         self.device = device
         RGB_MEAN = [0.5, 0.5, 0.5]
         RGB_STD = [0.5, 0.5, 0.5]
         self.val_transform = self.transform(input_size, RGB_MEAN, RGB_STD)
-
-        self.model = self.build(model_name, input_size, num_classes)
+        self.model = self.build_net(model_name, input_size, num_classes)
         self.load_model(model_path)
         self.model.to(device)
         self.model.eval()  # set to val mode
 
-    def build(self, model_name, input_size, num_classes):
+    def build_net(self, model_name, input_size, num_classes):
         """
         :param model_name:
         :param input_size:
@@ -69,22 +68,43 @@ class Validation(object):
         return out_tensor
 
     def pre_process(self, image):
+        """
+        :param image:
+        :return:
+        """
         image = Image.fromarray(image)
         image_tensor = self.val_transform(image)
         image_tensor = torch.unsqueeze(image_tensor, dim=0)
         return image_tensor
 
+    def post_process(self, output):
+        """
+        :param output:
+        :return:
+        """
+        pred_score = self.softmax(output, axis=1)
+        index = np.argmax(pred_score, axis=1)
+        score = pred_score[:, index]
+        return index, score
+
     def predict(self, image):
+        """
+        :param image:
+        :return:
+        """
         input_tensor = self.pre_process(image)
         output = self.forward(input_tensor)
-        output = output.cpu().data.numpy()  # gpu:output.data.numpy()
-        pre_score = self.softmax(output, axis=1)
-        pre_index = np.argmax(pre_score, axis=1)
-        max_score = pre_score[:, pre_index]
-        return pre_index, max_score
+        output = output.cpu().data.numpy()
+        pred_index, pred_score = self.post_process(output)
+        return pred_index, pred_score
 
     @staticmethod
     def softmax(x, axis=1):
+        """
+        :param x:
+        :param axis:
+        :return:
+        """
         # 计算每行的最大值
         row_max = x.max(axis=axis)
 
@@ -109,11 +129,11 @@ class Validation(object):
 
 
 if __name__ == "__main__":
-    model_path = "/media/dm/dm/FaceRecognition/torch-image-classification-pipeline/work_space/ResNet18_20200409165557/model/model_ResNet18_099.pth"
-    image_dir = "/media/dm/dm/FaceRecognition/torch-image-classification-pipeline/data/test_images"
+    model_path = "data/pretrained/model_ResNet18_099.pth"
+    image_dir = "data/test_images"
     model_name = "ResNet18"
     input_size = [112, 112]
     num_classes = 4
     device = "cuda:0"
-    v = Validation(model_path, model_name, input_size, num_classes, device)
+    v = Predictor(model_path, model_name, input_size, num_classes, device)
     v.image_predict(image_dir)
