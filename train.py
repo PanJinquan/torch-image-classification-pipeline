@@ -20,7 +20,7 @@ from models.dataloader import imagefolder_dataset
 from models.dataloader import custom_transform
 from models.core import lr_scheduler
 from tensorboardX import SummaryWriter
-from evaluation.eval_tools.average_meter import AverageMeter, accuracy
+from evaluation.eval_tools.metrics import AverageMeter, accuracy
 from utils import file_processing, json_utils
 
 print("torch", torch.__version__)

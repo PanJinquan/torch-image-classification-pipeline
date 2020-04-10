@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 # --------------------------------------------------------
-# Copyright (c) DMAI Inc. and its affiliates. All Rights Reserved.
-# Licensed under The MIT License [see LICENSE for details]
-# Written by panjinquan@dm-ai.cn
 # @Project: torch-Face-Recognize-Pipeline
 # @File   : validation.py
 # @Author : panjq
@@ -135,5 +132,5 @@ if __name__ == "__main__":
     input_size = [112, 112]
     num_classes = 4
     device = "cuda:0"
-    v = Predictor(model_path, model_name, input_size, num_classes, device)
-    v.image_predict(image_dir)
+    p = Predictor(model_path, model_name, input_size, num_classes, device)
+    p.image_predict(image_dir)
