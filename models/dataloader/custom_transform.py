@@ -111,6 +111,7 @@ def custom_transform(input_size, RGB_MEAN, RGB_STD, transform_type):
     elif transform_type == "val":
         transform = transforms.Compose([
             transforms.Resize([int(128 * input_size[0] / 112), int(128 * input_size[0] / 112)]),
+            transforms.CenterCrop([input_size[0], input_size[1]]),
             transforms.ToTensor(),
             transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
         ])
