@@ -38,8 +38,8 @@ class AverageMeter(object):
 def accuracy(pred, target, topk=(1,)):
     """
     Computes the precision@k for the specified values of k
-    :param pred: pred labels
-    :param target: target labels
+    :param pred: pred labels,     torch.Size([batch_size, num_class])
+    :param target: target labels, torch.Size([batch_size])
     :param topk: Top K
     :return:
     """
@@ -68,7 +68,16 @@ class ROCMeter(object):
         self.target = np.ones(0)
         self.output = np.ones(0)
 
-    def update(self, target, output):
+    def update(self, output,target):
+        """
+        Usage:
+            test_metrics.update(target.cpu().detach().numpy(), output.cpu().detach().numpy())
+            tpr001 = self.test_metrics.get_tpr(0.01)
+            metrics_i_string = 'TPR@FPR=10-2: {:.4f}\t'.format(tpr001)
+        :param output: <class 'tuple'>: (batch_size, num_class)
+        :param target: <class 'tuple'>: (batch_size,)
+        :return:
+        """
         # If we use cross-entropy
         if len(output.shape) > 1 and output.shape[1] > 1:
             output = output[:, 1]
@@ -77,7 +86,12 @@ class ROCMeter(object):
         self.target = np.hstack([self.target, target])
         self.output = np.hstack([self.output, output])
 
-    def get_tpr(self, fixed_fpr):
+    def get_tpr(self, fixed_fpr=0.01):
+        """
+        get TPR
+        :param fixed_fpr:<float>
+        :return:
+        """
         fpr, tpr, thr = roc_curve(self.target, self.output)
         tpr_filtered = tpr[fpr <= fixed_fpr]
         if len(tpr_filtered) == 0:
@@ -85,6 +99,11 @@ class ROCMeter(object):
         return tpr_filtered[-1]
 
     def get_accuracy(self, thr=0.5):
+        """
+        get Acc
+        :param thr:
+        :return:
+        """
         acc = accuracy_score(self.target,
                              self.output >= thr)
         return acc

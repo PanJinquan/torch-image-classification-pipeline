@@ -100,6 +100,21 @@ def get_roc_curve(y_true, y_score, invert=False, plot_roc=True):
     return fpr, tpr, roc_auc, threshold, optimal_idx
 
 
+def get_tpr_fpr(fpr, tpr, fixed_fpr=0.01):
+    """
+    metrics_i_string = 'TPR@FPR=10-2: {:.4f}\t'.format(get_tpr_fpr(fpr, tpr,0.01))
+    metrics_i_string += 'TPR@FPR=10-3: {:.4f}\t'.format(get_tpr_fpr(fpr, tpr,0.001))
+    metrics_i_string += 'TPR@FPR=10-4: {:.4f}\t'.format(get_tpr_fpr(fpr, tpr,0.0001))
+    :param fixed_fpr:<float>
+    :return:
+    """
+    # fpr, tpr, thr = metrics.roc_curve(target, output)
+    # fpr, tpr, threshold = metrics.roc_curve(y_true, y_score, pos_label=1)
+    tpr_filtered = tpr[fpr <= fixed_fpr]
+    if len(tpr_filtered) == 0:
+        return 0.0
+    return tpr_filtered[-1]
+
 def custom_roc_curve(y_true, y_score):
     lw = 2
     plt.figure(figsize=(10, 10))

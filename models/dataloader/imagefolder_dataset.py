@@ -17,6 +17,7 @@ import torch.distributed as dist
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader, Sampler
 from utils import image_processing, file_processing
+from models.dataloader import balanced_classes
 
 
 def make_weights_for_balanced_classes(images, nclasses):
@@ -175,6 +176,14 @@ class ImageFolderDataset(Dataset):
         image = self.transform(image)
         return image
 
+    def get_classes_weights(self, label_index=1):
+        labels_list = []
+        for item in self.imgs:
+            label = item[label_index]
+            labels_list.append(label)
+        weight = balanced_classes.create_sample_weight_torch(labels_list)
+        return weight
+
 
 class KDImageFolderDataset(ImageFolderDataset):
     '''
@@ -286,10 +295,10 @@ if __name__ == '__main__':
     print("num classs:{}".format(dataset_train.get_numclass()))
     print("class_to_idx:{}".format(dataset_train.get_class_to_idx()))
     weights = make_weights_for_balanced_classes(dataset_train.imgs, len(dataset_train.classes))
+    weights = dataset_train.get_classes_weights()
     weights = torch.DoubleTensor(weights)
     # 自定义从数据集中取样本的策略，如果指定这个参数，那么shuffle必须为False
-    # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
-    sampler = None
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
     batch_size = 2
     dataloader = DataLoader(dataset_train, batch_size, sampler=sampler, pin_memory=PIN_MEMORY,
                             num_workers=NUM_WORKERS, drop_last=DROP_LAST, shuffle=False)

@@ -19,7 +19,8 @@ from models.nets import nets
 from models.dataloader import imagefolder_dataset
 from models.dataloader import custom_transform
 from models.core import lr_scheduler
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from evaluation.eval_tools.metrics import AverageMeter, accuracy
 from utils import file_processing, json_utils
 
@@ -48,6 +49,7 @@ class Trainer(object):
         self.batch_size = cfg["batch_size"]
         self.lr = cfg["lr"]  # initial LR
         self.momentum = cfg["momentum"]
+        self.optim_tpye = cfg["optim_tpye"]
         self.num_epoch = cfg["num_epoch"]
         self.resample = cfg["resample"]
         self.num_epoch_warm_up = cfg["num_epoch_warm_up"]
@@ -74,7 +76,7 @@ class Trainer(object):
         self.val_dataloader()
         self.model = self.build_net(self.model_name, input_size=self.input_size, num_classes=self.num_class)
         self.model.to(self.device)
-        self.optimizer = self.get_optimizer(optim_tpye="SGD")
+        self.optimizer = self.get_optimizer(optim_tpye=self.optim_tpye)
         self.loss = nn.CrossEntropyLoss()
         self.lr_scheduler = lr_scheduler.multi_step_lr(self.optimizer, self.stages, gamma=self.lr)
 
@@ -93,7 +95,7 @@ class Trainer(object):
         # create a weighted random sampler to process imbalanced data
         if self.resample:
             weights = custom_transform.make_weights_for_balanced_classes(dataset_train.imgs, len(dataset_train.classes))
-            weights = torch.DoubleTensor(weights)
+            # weights = dataset_train.get_classes_weights()
             sampler = torch_utils.sampler.WeightedRandomSampler(weights, len(weights))
             shuffle = False  # sampler option is mutually exclusive with shuffle
         else:
@@ -135,11 +137,18 @@ class Trainer(object):
         :param optim_tpye:
         :return:
         """
-        optimizer = optim.SGD(self.model.parameters(),
-                              lr=self.lr,
-                              momentum=self.momentum,
-                              weight_decay=self.weight_decay)
-
+        if optim_tpye == "SGD":
+            optimizer = optim.SGD(self.model.parameters(),
+                                  lr=self.lr,
+                                  momentum=self.momentum,
+                                  weight_decay=self.weight_decay)
+        elif optim_tpye == "Adam":
+            betas = (0.5, 0.999)
+            optimizer = optim.Adam(self.model.parameters(),
+                                   lr=self.lr,
+                                   weight_decay=self.weight_decay)
+        else:
+            raise Exception("Error:{}".format(optim_tpye))
         return optimizer
 
     def build_net(self, model_name, input_size, num_classes):
@@ -149,7 +158,7 @@ class Trainer(object):
         :param num_classes:
         :return:
         """
-        model = nets.build_net(model_name, input_size, num_classes)
+        model = nets.build_net(model_name, input_size, num_classes, pretrained=True)
         if len(self.gpu_id) > 1:
             model = nn.DataParallel(model, device_ids=self.gpu_id)
         model = self.resume_model(model)
@@ -218,7 +227,11 @@ class Trainer(object):
                 # dispaly training loss & acc
                 if step % self.disp_freq == 0 and step > 0:
                     lr = self.optimizer.param_groups[0]["lr"]
-                    train_log = "epoch/step: {:0=3}/{} lr: {} Acc: {}".format(epoch, step, lr, acc)
+                    train_log = "epoch/step: {:0=3}/{} lr: {:.6f} loss: {:.4f} Acc: {:.4f}%".format(epoch,
+                                                                                                   step,
+                                                                                                   lr,
+                                                                                                   losses.avg,
+                                                                                                   top1.avg)
                     self.val_log.write_line_str(train_log)
                     print(train_log)
             self.writer.add_scalar("Training_Loss_epoch", losses.avg, epoch)
@@ -245,7 +258,7 @@ class Trainer(object):
                 acc, = accuracy(outputs.data, labels, topk=(1,))
                 losses.update(loss.data.item(), inputs.size(0))
                 top1.update(acc.data.item(), inputs.size(0))
-        val_log = "evaluation-epoch: {:0=3} loss: {} Acc: {}".format(epoch, losses.avg, top1.avg)
+        val_log = "evaluation-epoch: {:0=3} loss: {:.4f} Acc: {:.4f}".format(epoch, losses.avg, top1.avg)
         print(val_log)
         self.val_log.write_line_str(val_log)
         self.writer.add_scalar("Val_Loss_epoch", losses.avg, epoch)

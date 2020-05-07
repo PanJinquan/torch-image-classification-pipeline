@@ -17,9 +17,14 @@ sys.path.append(os.getcwd())
 
 
 class Validation(predictor.Predictor):
+    """Validation"""
+
     def __init__(self, model_path, model_name, input_size, num_classes, device):
         args = model_path, model_name, input_size, num_classes, device
         super(Validation, self).__init__(*args)
+
+    def image_predict(self, image_dir):
+        super(Validation, self).image_predict(image_dir)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@
 
 import torch
 
-from evaluation.eval_tools.average_meter import AverageMeter, accuracy
+from evaluation.eval_tools.metrics import AverageMeter, accuracy
 
 
 class EvaluationMetrics(object):

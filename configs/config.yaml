@@ -1,7 +1,7 @@
 data_root: './data/dataset/train'
 val_root: './data/dataset/val'
 work_dir: work_space
-model_name: "ResNet18"
+model_name: "resnet18"
 
 resume: False
 input_size: [112,112]
@@ -10,6 +10,7 @@ RGB_STD: [0.5, 0.5, 0.5]   # for normalize,Sequence of standard deviations for e
 
 batch_size: 16
 lr: 0.1
+optim_tpye: "SGD"             # SGD,Adam
 momentum: 0.9              # SGD momentum
 num_epoch: 100
 resample: True

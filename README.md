@@ -19,11 +19,11 @@
 ## 2.train
 
 ```bash
-bash train.py
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python train.py
 ```
 
 ## 3.validation
 
 ```bash
-bash validation.py
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python validation.py
 ```
