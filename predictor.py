@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 # --------------------------------------------------------
-# @Project: torch-Face-Recognize-Pipeline
+# @Project: torch-image-classification-pipeline
 # @File   : validation.py
 # @Author : panjq
 # @Date   : 2019-6-20 13:18:34

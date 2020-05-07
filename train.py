@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 # --------------------------------------------------------
-# @Project: torch-anti-spoofing-Pipeline
+# @Project: torch-image-classification-pipeline
 # @Author : panjq
 # @E-mail : pan_jinquan@163.com
 # @Date   : 2020-04-09 10:54:14
@@ -228,10 +228,10 @@ class Trainer(object):
                 if step % self.disp_freq == 0 and step > 0:
                     lr = self.optimizer.param_groups[0]["lr"]
                     train_log = "epoch/step: {:0=3}/{} lr: {:.6f} loss: {:.4f} Acc: {:.4f}%".format(epoch,
-                                                                                                   step,
-                                                                                                   lr,
-                                                                                                   losses.avg,
-                                                                                                   top1.avg)
+                                                                                                    step,
+                                                                                                    lr,
+                                                                                                    losses.avg,
+                                                                                                    top1.avg)
                     self.val_log.write_line_str(train_log)
                     print(train_log)
             self.writer.add_scalar("Training_Loss_epoch", losses.avg, epoch)
@@ -284,8 +284,7 @@ class Trainer(object):
         torch.save({
             "epoch": epoch,
             "optimizer_state_dict": optimizer.state_dict()},
-            optimizer_pth,
-        )
+            optimizer_pth)
 
 
 if __name__ == "__main__":
