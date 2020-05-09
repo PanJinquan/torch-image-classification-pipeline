@@ -77,11 +77,21 @@ class Predictor(object):
     def post_process(self, output):
         """
         :param output:
+        :return:prob_scores
+        """
+        # prob_scores = self.softmax(output, axis=1)
+        prob_scores = torch.nn.functional.softmax(output, dim=1)
+        return prob_scores
+
+    def get_pred_id_score(self, prob_scores):
+        """
+        :param prob_scores: shape=(batch_size,num_class)
         :return:
         """
-        pred_score = self.softmax(output, axis=1)
-        index = np.argmax(pred_score, axis=1)
-        score = pred_score[:, index]
+        if isinstance(prob_scores, torch.Tensor):
+            prob_scores = prob_scores.cpu().detach().numpy()
+        index = np.argmax(prob_scores, axis=1)
+        score = np.max(prob_scores, axis=1)
         return index, score
 
     def predict(self, image):
@@ -91,13 +101,14 @@ class Predictor(object):
         """
         input_tensor = self.pre_process(image)
         output = self.forward(input_tensor)
-        output = output.cpu().data.numpy()
-        pred_index, pred_score = self.post_process(output)
+        prob_scores = self.post_process(output)
+        pred_index, pred_score = self.get_pred_id_score(prob_scores)
         return pred_index, pred_score
 
     @staticmethod
     def softmax(x, axis=1):
         """
+        outputs = torch.nn.functional.softmax(output, dim=1)
         :param x:
         :param axis:
         :return:
